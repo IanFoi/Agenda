@@ -29,9 +29,13 @@ import com.ianfoi.agenda.model.Categoria
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.random.Random
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
+import androidx.compose.ui.unit.Dp
 
 // Array auxiliar para los nombres de los meses
 val meses = listOf("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaAnualScreen(
@@ -41,98 +45,110 @@ fun VistaAnualScreen(
     val categorias by dao.getCategorias().collectAsState(initial = emptyList())
     var mostrarDialogo by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val anioActual = remember { LocalDate.now().getYear() }
+    val anioActual = remember { LocalDate.now().year }
     val scrollHorizontal = rememberScrollState()
+
+    val configuration = LocalConfiguration.current
+    val esHorizontal = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
         containerColor = Color(0xFFF5F5F5),
         floatingActionButton = {
+            //Boton para agregar una categoria.
             FloatingActionButton(
                 onClick = { mostrarDialogo = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Rubro")
+                Icon(Icons.Default.Add, contentDescription = "Agregar Categoria")
             }
         }
     ) { paddingValues ->
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(16.dp)) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            //Proporciones que dependen de la configuracion de la pantalla.
+            val (anchoNombre, anchoMes) = if (esHorizontal) {
+                val anchoPantalla = maxWidth
+                Pair(anchoPantalla * 0.2f, anchoPantalla * 0.065f)
+            } else {
+                val anchoPantalla = maxWidth
+                Pair(anchoPantalla * 0.25f, 45.dp)
 
-            Text(
-                text = "Agenda $anioActual",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.DarkGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
+            }
 
-            // --- CABECERA DE MESES ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Espacio congelado (alineado con los nombres de categoría)
-                Spacer(modifier = Modifier.width(112.dp))
+            Column(modifier = Modifier.fillMaxSize()) {
+            //Encabezado.
+                Text(
+                    text = "Agenda $anioActual",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.DarkGray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                )
 
-                // Scroll Horizontal CONECTADO AL MAESTRO
-                Row(modifier = Modifier.horizontalScroll(scrollHorizontal)) {
-                    meses.forEachIndexed { index, mes ->
-                        Box(
-                            modifier = Modifier
-                                .size(width = 45.dp, height = 30.dp)
-                                .padding(2.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color.DarkGray)
-                                .clickable { alHacerClickEnMes(index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = mes.take(3), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                // --- CABECERA DE MESES ---
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.width(anchoNombre + 12.dp))
+
+                    Row(modifier = Modifier.horizontalScroll(scrollHorizontal)) {
+                        meses.forEachIndexed { index, mes ->
+                            Box(
+                                modifier = Modifier
+                                    .width(anchoMes)
+                                    .height(30.dp)
+                                    .padding(2.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.DarkGray)
+                                    .clickable { alHacerClickEnMes(index) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = mes.take(3),
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // --- LISTA DE FILAS ---
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(categorias) { categoria ->
-                    FilaAnual(
-                        categoria = categoria,
-                        anioActual = anioActual,
-                        dao = dao,
-                        scrollState = scrollHorizontal
-                    )
+                // --- LISTA DE FILAS ---
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categorias) { categoria ->
+                        FilaAnual(
+                            categoria = categoria,
+                            anioActual = anioActual,
+                            dao = dao,
+                            scrollState = scrollHorizontal,
+                            anchoNombre = anchoNombre,
+                            anchoMes = anchoMes
+                        )
+                    }
                 }
             }
         }
 
-        // --- VENTANA EMERGENTE (Sin cambios) ---
         if (mostrarDialogo) {
             DialogoNuevaCategoria(
                 onDismiss = { mostrarDialogo = false },
                 onConfirm = { nombreNuevo ->
                     scope.launch {
-                        val colorRandom = Color(
-                            red = Random.nextInt(180),
-                            green = Random.nextInt(180),
-                            blue = Random.nextInt(180)
-                        ).toArgb().toLong()
-
-                        dao.insertarCategoria(
-                            Categoria(nombre = nombreNuevo, color = colorRandom, orden = categorias.size)
-                        )
+                        val colorRandom = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256)).toArgb().toLong()
+                        dao.insertarCategoria(Categoria(nombre = nombreNuevo, color = colorRandom, orden = categorias.size))
                         mostrarDialogo = false
                     }
                 }
@@ -140,13 +156,14 @@ fun VistaAnualScreen(
         }
     }
 }
-
 @Composable
 fun FilaAnual(
     categoria: Categoria,
     anioActual: Int,
     dao: AgendaDao,
-    scrollState: ScrollState // <--- AHORA RECIBE EL SCROLL STATE
+    scrollState: ScrollState,
+    anchoNombre: Dp,
+    anchoMes: Dp
 ) {
     Card(
         elevation = CardDefaults.cardElevation(2.dp),
@@ -158,12 +175,12 @@ fun FilaAnual(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. COLUMNA FIJA (NOMBRE) - NO SCROLEA
+            // COLUMNA NOMBRE DE CATEGORIA
             Surface(
                 color = Color(categoria.color),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
-                    .width(100.dp)
+                    .width(anchoNombre)
                     .heightIn(min = 40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -175,14 +192,14 @@ fun FilaAnual(
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(4.dp)
+                        modifier = Modifier.fillMaxWidth().padding(8.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // 2. COLUMNA MÓVIL (CELDAS) - USA EL SCROLL STATE COMPARTIDO
+            // COLUMNA CELDAS
             Row(modifier = Modifier.horizontalScroll(scrollState)) {
                 meses.forEachIndexed { index, _ ->
                     val inicioMes = (anioActual * 10000 + index * 100 + 0).toLong()
@@ -190,21 +207,28 @@ fun FilaAnual(
 
                     val conteo by dao.contarPorMes(categoria.id, inicioMes, finMes).collectAsState(initial = 0)
 
-                    CasillaMes(valor = conteo, colorCategoria = Color(categoria.color))
+                    CasillaMes(
+                        valor = conteo,
+                        colorCategoria = Color(categoria.color),
+                        ancho = anchoMes
+                    )
                 }
             }
         }
     }
-}
-
-@Composable
-fun CasillaMes(valor: Int, colorCategoria: Color) {
+}@Composable
+fun CasillaMes(
+    valor: Int,
+    colorCategoria: Color,
+    ancho: Dp
+) {
     val fondo = if (valor > 0) colorCategoria else Color(0xFFEEEEEE)
     val textoColor = if (valor > 0) Color.White else Color.Transparent
 
     Box(
         modifier = Modifier
-            .size(width = 45.dp, height = 40.dp)
+            .width(ancho)
+            .height(40.dp)
             .padding(2.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(fondo),
@@ -220,7 +244,6 @@ fun CasillaMes(valor: Int, colorCategoria: Color) {
         }
     }
 }
-
 @Composable
 fun DialogoNuevaCategoria(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var texto by remember { mutableStateOf("") }

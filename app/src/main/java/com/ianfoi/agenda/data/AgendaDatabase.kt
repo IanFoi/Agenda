@@ -1,4 +1,4 @@
-package com.ejemplo.miagenda.data
+package com.ianfoi.agenda.data
 
 import android.content.Context
 import androidx.room.Database
