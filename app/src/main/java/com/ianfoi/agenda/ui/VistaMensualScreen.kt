@@ -2,7 +2,6 @@ package com.ianfoi.agenda.ui
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -20,13 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.model.Categoria
-import com.ianfoi.agenda.model.Registro
-import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,10 +34,15 @@ fun VistaMensualScreen(
     mesIndex: Int,
     onBack: () -> Unit
 ) {
+    val viewModel: AgendaViewModel = viewModel(
+        factory = AgendaViewModelFactory(dao)
+    )
     val categorias by dao.getCategorias().collectAsState(initial = emptyList())
     val nombreMes = meses.getOrElse(mesIndex) { "MES" }
-
-    // El cerebro compartido del scroll horizontal
+    val anioActual = remember { LocalDate.now().year }
+    val diasEnMes =  remember(mesIndex, anioActual) {
+        YearMonth.of(anioActual, mesIndex + 1).lengthOfMonth()
+    }
     val sharedScrollState = rememberScrollState()
 
     Scaffold(
@@ -63,7 +67,7 @@ fun VistaMensualScreen(
         ) {
 
             Text(
-                text = "Detalle: $nombreMes",
+                text = "$nombreMes $anioActual",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.DarkGray,
@@ -73,7 +77,6 @@ fun VistaMensualScreen(
                     .padding(bottom = 16.dp)
             )
 
-            // --- CABECERA DE DÍAS (1..31) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,7 +88,7 @@ fun VistaMensualScreen(
 
                 // Scroll Horizontal de los números
                 Row(modifier = Modifier.horizontalScroll(sharedScrollState)) {
-                    (1..31).forEach { dia ->
+                    (1..diasEnMes).forEach { dia ->
                         Box(
                             modifier = Modifier
                                 .size(width = 40.dp, height = 30.dp) // Un poco más ancho que alto
@@ -110,25 +113,33 @@ fun VistaMensualScreen(
                     FilaMensual(
                         categoria = categoria,
                         mesIndex = mesIndex,
-                        dao = dao,
-                        scrollState = sharedScrollState
-                    )
+                        anio = anioActual,
+                        diasDelMes = diasEnMes,
+                        viewModel = viewModel,
+                        scrollState = sharedScrollState,
+
+                        )
                 }
             }
         }
     }
 }
 
+// En VistaMensualScreen.kt
+
 @Composable
 fun FilaMensual(
     categoria: Categoria,
     mesIndex: Int,
-    dao: AgendaDao,
+    anio: Int,
+    diasDelMes: Int,
+    viewModel: AgendaViewModel,
     scrollState: ScrollState
 ) {
-    val scope = rememberCoroutineScope()
 
-    // 3. TARJETA (CARD) PARA CADA FILA
+    val diasMarcados by viewModel.obtenerMarcasDelMes(categoria.id, mesIndex, anio)
+        .collectAsState(initial = emptySet())
+
     Card(
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -139,13 +150,11 @@ fun FilaMensual(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. COLUMNA FIJA: NOMBRE (Estilo Píldora)
+            // ... (Tu código de Surface/Nombre se queda igual) ...
             Surface(
                 color = Color(categoria.color),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .width(100.dp)
-                    .heightIn(min = 40.dp)
+                modifier = Modifier.width(100.dp).heightIn(min = 40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
@@ -154,8 +163,6 @@ fun FilaMensual(
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(4.dp)
                     )
                 }
@@ -163,31 +170,27 @@ fun FilaMensual(
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // 2. COLUMNA MÓVIL: CASILLAS
+            // ... (Scroll de días) ...
             Row(modifier = Modifier.horizontalScroll(scrollState)) {
-                (1..31).forEach { dia ->
-                    val fechaId = (2026 * 10000 + mesIndex * 100 + dia).toLong()
-                    val estaMarcado by dao.estaMarcado(categoria.id, fechaId).collectAsState(initial = false)
+                (1..diasDelMes).forEach { dia ->
+                    val fechaId = (anio * 10000 + mesIndex * 100 + dia).toLong()
 
-                    // Estilos de la casilla
+                    // 2. BÚSQUEDA INSTANTÁNEA EN MEMORIA (Sin ir a la BD)
+                    val estaMarcado = diasMarcados.contains(fechaId)
+
                     val colorFondo = if (estaMarcado) Color(categoria.color) else Color(0xFFEEEEEE)
 
                     Box(
                         modifier = Modifier
-                            .size(40.dp) // Cuadradas
-                            .padding(2.dp) // Separación ("aire")
-                            .clip(RoundedCornerShape(6.dp)) // Bordes redondeados
+                            .size(40.dp)
+                            .padding(2.dp)
+                            .clip(RoundedCornerShape(6.dp))
                             .background(colorFondo)
                             .clickable {
-                                scope.launch {
-                                    val registro = Registro(categoria.id, fechaId)
-                                    if (estaMarcado) dao.desmarcar(registro) else dao.marcar(registro)
-                                }
+                                viewModel.alternarMarca(categoria.id, fechaId, estaMarcado)
                             },
-                        contentAlignment = Alignment.Center
-                    ) {
-
-                        // if (estaMarcado) Icon(Icons.Default.Check, tint = Color.White, ...)
+                        contentAlignment = Alignment.Center,
+                    ){
                     }
                 }
             }

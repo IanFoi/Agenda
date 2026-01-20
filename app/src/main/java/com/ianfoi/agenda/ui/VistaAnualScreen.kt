@@ -27,21 +27,21 @@ import androidx.compose.ui.unit.sp
 import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.model.Categoria
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.random.Random
 
 // Array auxiliar para los nombres de los meses
 val meses = listOf("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaAnualScreen(
     dao: AgendaDao,
-    alHacerClickEnMes: (Int) -> Unit
+    alHacerClickEnMes: (Int) -> Unit,
 ) {
     val categorias by dao.getCategorias().collectAsState(initial = emptyList())
     var mostrarDialogo by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-
+    val anioActual = remember { LocalDate.now().getYear() }
     val scrollHorizontal = rememberScrollState()
 
     Scaffold(
@@ -63,7 +63,7 @@ fun VistaAnualScreen(
             .padding(16.dp)) {
 
             Text(
-                text = "Mi Agenda 2026",
+                text = "Agenda $anioActual",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.DarkGray,
@@ -110,8 +110,9 @@ fun VistaAnualScreen(
                 items(categorias) { categoria ->
                     FilaAnual(
                         categoria = categoria,
+                        anioActual = anioActual,
                         dao = dao,
-                        scrollState = scrollHorizontal // 2. PASAMOS EL CEREBRO A CADA FILA
+                        scrollState = scrollHorizontal
                     )
                 }
             }
@@ -143,6 +144,7 @@ fun VistaAnualScreen(
 @Composable
 fun FilaAnual(
     categoria: Categoria,
+    anioActual: Int,
     dao: AgendaDao,
     scrollState: ScrollState // <--- AHORA RECIBE EL SCROLL STATE
 ) {
@@ -183,8 +185,8 @@ fun FilaAnual(
             // 2. COLUMNA MÓVIL (CELDAS) - USA EL SCROLL STATE COMPARTIDO
             Row(modifier = Modifier.horizontalScroll(scrollState)) {
                 meses.forEachIndexed { index, _ ->
-                    val inicioMes = (2026 * 10000 + index * 100 + 0).toLong()
-                    val finMes = (2026 * 10000 + index * 100 + 32).toLong()
+                    val inicioMes = (anioActual * 10000 + index * 100 + 0).toLong()
+                    val finMes = (anioActual * 10000 + index * 100 + 32).toLong()
 
                     val conteo by dao.contarPorMes(categoria.id, inicioMes, finMes).collectAsState(initial = 0)
 

@@ -67,4 +67,10 @@ suspend fun  marcar(registro: Registro)
     @Delete
 suspend fun desmarcar(registro: Registro)
 
+    /**
+     * Función para obtener todas las celdas marcadas del un mes dada una categoria.
+     */
+    @Query("SELECT fecha FROM tabla_registros WHERE :categoriaId = categoriaId AND fecha BETWEEN :inicio AND :fin")
+    fun obtenerFechasMarcadas(categoriaId: Int, inicio:Long, fin: Long): Flow<List<Long>>
+
 }
