@@ -1,5 +1,6 @@
 package com.ianfoi.agenda.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,8 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,11 +49,14 @@ fun VistaMensualScreen(
     }
     val sharedScrollState = rememberScrollState()
 
+    val configuration = LocalConfiguration.current
+    val esHorizontal = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Scaffold(
-        containerColor = Color(0xFFF5F5F5), // 1. Fondo gris suave
+        containerColor = Color(0xFFF5F5F5),
         topBar = {
             TopAppBar(
-                title = { }, // Dejamos vacío aquí para personalizar el título abajo o usarlo simple
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -59,73 +66,88 @@ fun VistaMensualScreen(
             )
         }
     ) { padding ->
-        Column(
+
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
+            // Proporciones que dependen de la configuracion de la pantalla.
+            val (anchoNombre, anchoDia) = if (esHorizontal) {
+                val anchoPantalla = maxWidth
+                Pair(anchoPantalla * 0.2f, anchoPantalla * 0.065f)
+            } else {
+                val anchoPantalla = maxWidth
+                Pair(anchoPantalla * 0.25f, 45.dp)
 
-            Text(
-                text = "$nombreMes $anioActual",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.DarkGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
+            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Espacio alineado con las categorías (100dp ancho + 12dp padding tarjeta)
-                Spacer(modifier = Modifier.width(112.dp))
+            Column(modifier = Modifier.fillMaxSize()) {
 
-                // Scroll Horizontal de los números
-                Row(modifier = Modifier.horizontalScroll(sharedScrollState)) {
-                    (1..diasEnMes).forEach { dia ->
-                        Box(
-                            modifier = Modifier
-                                .size(width = 40.dp, height = 30.dp) // Un poco más ancho que alto
-                                .padding(2.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color.DarkGray), // Estilo oscuro igual a la vista anual
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = "$dia", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "$nombreMes $anioActual",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.DarkGray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                )
+
+                // --- CABECERA DE DÍAS ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Spacer del Nombre
+                    Spacer(modifier = Modifier.width(anchoNombre))
+
+                    //  Spacer interno (hueco entre nombre y días)
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    //  Fila de días
+                    Row(modifier = Modifier.horizontalScroll(sharedScrollState)) {
+                        (1..diasEnMes).forEach { dia ->
+                            Box(
+                                modifier = Modifier
+                                    .width(anchoDia)
+                                    .height(30.dp)
+                                    .padding(2.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.DarkGray),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "$dia", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
-            }
-
-            // --- CUERPO DE LA TABLA ---
-            LazyColumn(
-                modifier = Modifier.weight(1f), // Permite scroll vertical si hay muchas categorías
-                verticalArrangement = Arrangement.spacedBy(8.dp), // Espacio entre tarjetas
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(categorias) { categoria ->
-                    FilaMensual(
-                        categoria = categoria,
-                        mesIndex = mesIndex,
-                        anio = anioActual,
-                        diasDelMes = diasEnMes,
-                        viewModel = viewModel,
-                        scrollState = sharedScrollState,
-
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(categorias) { categoria ->
+                        FilaMensual(
+                            categoria = categoria,
+                            mesIndex = mesIndex,
+                            anio = anioActual,
+                            diasDelMes = diasEnMes,
+                            viewModel = viewModel,
+                            scrollState = sharedScrollState,
+                            anchoNombre = anchoNombre,
+                            anchoDia = anchoDia
                         )
+                    }
                 }
             }
         }
     }
 }
-
-// En VistaMensualScreen.kt
 
 @Composable
 fun FilaMensual(
@@ -134,7 +156,9 @@ fun FilaMensual(
     anio: Int,
     diasDelMes: Int,
     viewModel: AgendaViewModel,
-    scrollState: ScrollState
+    scrollState: ScrollState,
+    anchoNombre: Dp,
+    anchoDia: Dp
 ) {
 
     val diasMarcados by viewModel.obtenerMarcasDelMes(categoria.id, mesIndex, anio)
@@ -150,39 +174,45 @@ fun FilaMensual(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ... (Tu código de Surface/Nombre se queda igual) ...
             Surface(
                 color = Color(categoria.color),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.width(100.dp).heightIn(min = 40.dp)
+                modifier = Modifier
+                    .width(anchoNombre)
+                    .heightIn(min = 40.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Text(
                         text = categoria.nombre,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(4.dp)
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // ... (Scroll de días) ...
+            // COLUMNA DIAS
             Row(modifier = Modifier.horizontalScroll(scrollState)) {
                 (1..diasDelMes).forEach { dia ->
                     val fechaId = (anio * 10000 + mesIndex * 100 + dia).toLong()
-
-                    // 2. BÚSQUEDA INSTANTÁNEA EN MEMORIA (Sin ir a la BD)
                     val estaMarcado = diasMarcados.contains(fechaId)
-
                     val colorFondo = if (estaMarcado) Color(categoria.color) else Color(0xFFEEEEEE)
 
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .width(anchoDia) // <--- Ancho calculado para la celda
+                            .height(40.dp)   // Alto fijo (cuadrado si anchoDia es ~40)
                             .padding(2.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(colorFondo)
@@ -190,7 +220,7 @@ fun FilaMensual(
                                 viewModel.alternarMarca(categoria.id, fechaId, estaMarcado)
                             },
                         contentAlignment = Alignment.Center,
-                    ){
+                    ) {
                     }
                 }
             }

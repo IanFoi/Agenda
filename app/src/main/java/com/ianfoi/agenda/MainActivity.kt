@@ -9,7 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.ejemplo.miagenda.data.AgendaDatabase
+import com.ianfoi.agenda.data.AgendaDatabase
 import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.ui.VistaAnualScreen
 import com.ianfoi.agenda.ui.VistaMensualScreen
