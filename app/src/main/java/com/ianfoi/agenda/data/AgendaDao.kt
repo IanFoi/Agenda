@@ -1,12 +1,14 @@
 package com.ianfoi.agenda.data
 
-import androidx.compose.runtime.snapshots.SnapshotId
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.ianfoi.agenda.model.Categoria
+import com.ianfoi.agenda.model.CategoriaTop
+import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
 import kotlinx.coroutines.flow.Flow
 
@@ -78,4 +80,36 @@ suspend fun desmarcar(registro: Registro)
     @Query("SELECT fecha FROM tabla_registros WHERE :categoriaId = categoriaId AND fecha BETWEEN :inicio AND :fin")
     fun obtenerFechasMarcadas(categoriaId: Int, inicio:Long, fin: Long): Flow<List<Long>>
 
+    /**
+     * Funcion que obtiene de la base de datos las categorias mas marcadas en un intervalo de tiempo.
+     * @param inicio El inicio del intervalo consultado.
+     * @param fin El fin del intervalo consultado.
+     */
+    @Query("""
+    SELECT c.Id, c.nombre, c.color, COUNT(r.fecha) as puntaje 
+    FROM tabla_categorias c 
+    LEFT JOIN tabla_registros r ON c.id = r.categoriaId AND r.fecha BETWEEN :inicio AND :fin
+    GROUP BY c.id 
+    ORDER BY puntaje DESC 
+    LIMIT 3
+""")
+    fun obtenerTop3Categorias(inicio: Long, fin: Long): Flow<List<CategoriaTop>>
+
+
+
+    // --- SECCIÓN OBJETIVOS ---
+
+    @Query("SELECT * FROM tabla_objetivos ORDER BY id DESC")
+    fun obtenerObjetivos(): Flow<List<Objetivo>>
+
+    @Query("SELECT * FROM tabla_objetivos WHERE id = :id")
+    fun obtenerObjetivoPorId(id: Int): Flow<Objetivo>
+    @Insert
+    suspend fun insertarObjetivo(objetivo: Objetivo)
+
+    @Update
+    suspend fun actualizarObjetivo(objetivo: Objetivo)
+
+    @Delete
+    suspend fun eliminarObjetivo(objetivo: Objetivo)
 }

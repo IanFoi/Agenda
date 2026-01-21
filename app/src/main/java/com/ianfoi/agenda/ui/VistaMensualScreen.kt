@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.model.Categoria
+import com.ianfoi.agenda.viewmodel.AgendaViewModel
+import com.ianfoi.agenda.viewmodel.AgendaViewModelFactory
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -51,7 +54,7 @@ fun VistaMensualScreen(
 
     val configuration = LocalConfiguration.current
     val esHorizontal = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
+    val density = LocalDensity.current
     Scaffold(
         containerColor = Color(0xFFF5F5F5),
         topBar = {
@@ -73,16 +76,42 @@ fun VistaMensualScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
+            val anchoPantalla = maxWidth
+
             // Proporciones que dependen de la configuracion de la pantalla.
             val (anchoNombre, anchoDia) = if (esHorizontal) {
-                val anchoPantalla = maxWidth
                 Pair(anchoPantalla * 0.2f, anchoPantalla * 0.065f)
             } else {
-                val anchoPantalla = maxWidth
                 Pair(anchoPantalla * 0.25f, 45.dp)
 
             }
+            LaunchedEffect(Unit) {
+                val hoy = LocalDate.now()
 
+                // Solo hacemos scroll si estamos viendo el AÑO actual y el MES actual
+                if (hoy.year == anioActual && hoy.monthValue == (mesIndex + 1)) {
+                    val diaHoy = hoy.dayOfMonth
+
+                    with(density) {
+                        // A. Convertimos los tamaños de DP a Píxeles
+                        val anchoDiaPx = anchoDia.toPx()
+                        // El espacio disponible para los días es el ancho total menos la columna de nombres
+                        val espacioParaDiasPx = anchoPantalla.toPx() - anchoNombre.toPx()
+
+                        // B. Calculamos la posición del día de hoy (El inicio del día)
+                        // Restamos 1 porque si es día 1, el scroll debe ser 0
+                        val posicionDiaPx = (diaHoy - 1) * anchoDiaPx
+
+                        // C. Centrado:
+                        // Queremos que el día esté en el medio del "Espacio para días".
+                        // Fórmula: Posición - (Mitad del espacio visible) + (Mitad del ancho del día)
+                        val scrollObjetivo = posicionDiaPx - (espacioParaDiasPx / 2) + (anchoDiaPx / 2)
+
+                        // D. Aplicamos el scroll (asegurando que no sea negativo)
+                        sharedScrollState.scrollTo(scrollObjetivo.toInt().coerceAtLeast(0))
+                    }
+                }
+            }
             Column(modifier = Modifier.fillMaxSize()) {
 
                 Text(

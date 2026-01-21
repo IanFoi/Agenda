@@ -4,14 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.model.Categoria
+import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
 @Database(
-    entities = [Categoria::class, Registro::class],
-    version = 1,
+    entities = [Categoria::class, Registro::class, Objetivo::class],
+    version = 2,
     exportSchema = false
 )
+
 /**
  * Clase abstracta correspondiente a una base de datos Room.
  */
