@@ -31,9 +31,10 @@ import java.time.LocalDate
 import kotlin.random.Random
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 
-// Array auxiliar para los nombres de los meses
 val meses = listOf("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,7 @@ val meses = listOf("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO
 fun VistaAnualScreen(
     dao: AgendaDao,
     alHacerClickEnMes: (Int) -> Unit,
+    onBack: () -> Unit
 ) {
     val categorias by dao.getCategorias().collectAsState(initial = emptyList())
     var mostrarDialogo by remember { mutableStateOf(false) }
@@ -50,7 +52,7 @@ fun VistaAnualScreen(
 
     val configuration = LocalConfiguration.current
     val esHorizontal = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
+    val density = LocalDensity.current
     Scaffold(
         containerColor = Color(0xFFF5F5F5),
         floatingActionButton = {
@@ -62,6 +64,17 @@ fun VistaAnualScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Categoria")
             }
+        },
+        topBar = {
+            TopAppBar(
+                title = { },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
         }
     ) { paddingValues ->
 
@@ -71,14 +84,32 @@ fun VistaAnualScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            val anchoPantalla = maxWidth
+
             //Proporciones que dependen de la configuracion de la pantalla.
             val (anchoNombre, anchoMes) = if (esHorizontal) {
-                val anchoPantalla = maxWidth
                 Pair(anchoPantalla * 0.2f, anchoPantalla * 0.065f)
             } else {
-                val anchoPantalla = maxWidth
                 Pair(anchoPantalla * 0.25f, 45.dp)
 
+            }
+            LaunchedEffect(anioActual, esHorizontal) {
+                val hoy = LocalDate.now()
+
+
+                if (!esHorizontal && anioActual == hoy.year) {
+
+                    val mesActualIndex = hoy.monthValue - 1
+                    with(density) {
+                        val anchoMesPx = anchoMes.toPx()
+                        val anchoNombrePx = anchoNombre.toPx()
+                        val anchoTotalPantallaPx = anchoPantalla.toPx()
+                        val espacioVisibleParaMesesPx = anchoTotalPantallaPx - anchoNombrePx
+                        val posicionMesPx = mesActualIndex * anchoMesPx
+                        val scrollObjetivo = posicionMesPx - (espacioVisibleParaMesesPx / 2) + (anchoMesPx / 2)
+                        scrollHorizontal.scrollTo(scrollObjetivo.toInt().coerceAtLeast(0))
+                    }
+                }
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -92,9 +123,9 @@ fun VistaAnualScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 )
 
-                // --- CABECERA DE MESES ---
+                //   Cabecera de meses.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp,end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Spacer(modifier = Modifier.width(anchoNombre + 12.dp))
@@ -122,7 +153,7 @@ fun VistaAnualScreen(
                     }
                 }
 
-                // --- LISTA DE FILAS ---
+                //  Lista de filas
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 80.dp),
@@ -175,7 +206,7 @@ fun FilaAnual(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // COLUMNA NOMBRE DE CATEGORIA
+            //Columna con los nombres de categoria.
             Surface(
                 color = Color(categoria.color),
                 shape = RoundedCornerShape(8.dp),

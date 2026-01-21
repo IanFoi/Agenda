@@ -1,16 +1,18 @@
-package com.ianfoi.agenda.ui
+package com.ianfoi.agenda.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ianfoi.agenda.data.AgendaDao
+import com.ianfoi.agenda.model.CategoriaTop
+import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
-
+    val listaDeObjetivos: Flow<List<Objetivo>> = dao.obtenerObjetivos()
     /**
      * Función para obtener las marcas correspondientes a una categoria en un mes.
      * @param categoriaId Categoria consultada.
@@ -42,6 +44,43 @@ class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
             }
         }
     }
+    /**
+     * Funcion para obtener las 3 categorias mas marcadas en un año.
+     * @param anio El año del que se quiere consultar.
+     * @return Una FlowList de CategoriaTop con hasta 3 categorias mas seleccionadas.
+     */
+    fun obtenerTop3(anio: Int): Flow<List<CategoriaTop>> {
+        val inicio = (anio * 10000).toLong()
+        val fin = (anio * 10000 + 1300).toLong()
+        return dao.obtenerTop3Categorias(inicio, fin)
+    }
+
+    /**
+     * Función para agregar un objetivo a la base de datos.
+     */
+    fun agregarObjetivo(nombre: String){
+        viewModelScope.launch {
+            dao.insertarObjetivo(Objetivo(nombre = nombre))
+        }
+    }
+
+    /**
+     * Funcion para ambiar el estado del objetivo
+     */
+    fun toggleObjetivo(objetivo: Objetivo){
+        viewModelScope.launch {
+            dao.actualizarObjetivo(objetivo.copy(isCompletado = !objetivo.isCompletado))
+        }
+    }
+    fun borrarObjetivo(objetivo: Objetivo){
+        viewModelScope.launch {
+            dao.eliminarObjetivo(objetivo)
+        }
+    }
+    fun obtenerObjetivo(id: Int): Flow<Objetivo> {
+        return dao.obtenerObjetivoPorId(id)
+    }
+
 }
 
 /**
@@ -63,4 +102,7 @@ class AgendaViewModelFactory(private val dao: AgendaDao) : ViewModelProvider.Fac
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+
+
+
 }
