@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +28,7 @@ fun VistaObjetivoScreen(
 ) {
     val viewModel: AgendaViewModel = viewModel(factory = AgendaViewModelFactory(dao))
     val objetivo by viewModel.obtenerObjetivo(objetivoId).collectAsState(initial = null)
-
+    var mostrarDialogo by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = Color(0xFFF5F5F5),
         topBar = {
@@ -40,7 +41,17 @@ fun VistaObjetivoScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { mostrarDialogo = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.LightGray
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Agregar Tarea")
+            }
         }
+
     ) { padding ->
         Column(
             modifier = Modifier
@@ -48,10 +59,8 @@ fun VistaObjetivoScreen(
                 .padding(padding)
                 .padding(24.dp)
         ) {
-            // Verificamos si la base de datos ya respondió (puede tardar milisegundos)
             objetivo?.let { obj ->
 
-                // TARJETA PRINCIPAL
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     shape = RoundedCornerShape(16.dp),
@@ -67,7 +76,6 @@ fun VistaObjetivoScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Aquí se pinta el texto dinámico
                         Text(
                             text = obj.nombre,
                             style = MaterialTheme.typography.headlineMedium,
@@ -79,7 +87,6 @@ fun VistaObjetivoScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // ESTADO DEL OBJETIVO
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -114,6 +121,27 @@ fun VistaObjetivoScreen(
                     CircularProgressIndicator()
                 }
             }
+            if(mostrarDialogo){
+                DialogoNuevaTarea(
+                    onDismiss = {mostrarDialogo = false},
+                    onConfirm = { nombre ->
+                        viewModel.agregarObjetivo(nombre)
+                        mostrarDialogo = false
+                    }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun DialogoNuevaTarea(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var texto by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Nueva Tarea ") },
+        text = { TextField(value = texto, onValueChange = { texto = it }, label = { Text("Nombre") }, singleLine = true) },
+        confirmButton = { Button(onClick = { if (texto.isNotBlank()) onConfirm(texto) }) { Text("Agregar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
