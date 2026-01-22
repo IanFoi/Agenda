@@ -10,6 +10,7 @@ import com.ianfoi.agenda.model.Categoria
 import com.ianfoi.agenda.model.CategoriaTop
 import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
+import com.ianfoi.agenda.model.Tarea
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -98,18 +99,67 @@ suspend fun desmarcar(registro: Registro)
 
 
     // --- SECCIÓN OBJETIVOS ---
-
+    /**
+     * Funcion que obtiene de la base de datos la lista de objetivos del usuario.
+     * @return Flow List con los objetivos del usuario.
+     */
     @Query("SELECT * FROM tabla_objetivos ORDER BY id DESC")
     fun obtenerObjetivos(): Flow<List<Objetivo>>
 
+    /**
+     * Funcion que recupera de la base de datos un objetivo a partir de su Id.
+     * @param id La id del objetivo a buscar.
+     */
     @Query("SELECT * FROM tabla_objetivos WHERE id = :id")
     fun obtenerObjetivoPorId(id: Int): Flow<Objetivo>
+
+    /**
+     * Funcion que inserta en la base de datos un objetivo.
+     * @param objetivo el objetivo a insertar.
+     */
     @Insert
     suspend fun insertarObjetivo(objetivo: Objetivo)
 
+    /**
+     * Funcion para actualizar el estado de un objetivo.
+     * @param objetivo el objetivo a actualizar.
+     */
     @Update
     suspend fun actualizarObjetivo(objetivo: Objetivo)
 
+    /**
+     * Funciom para eliminar un objetivo de la base de datos.
+     * @param objetivo el objetivo a eliminar.
+     */
     @Delete
     suspend fun eliminarObjetivo(objetivo: Objetivo)
+// SECCION DE TAREAS.
+    /**
+     * Funcion para obtener las tareas relacionadas a un objetivo a partir de su id.
+     * @param objetivo El objetivo del que recuperamos sus tareas.
+     * @return FlowList con las tareas asociadas a un objetivo
+     */
+    @Query("SELECT * FROM tabla_tareas WHERE objetivoId = :objetivoId ORDER BY id ASC")
+    fun obtenerTareasDeObjetivo(objetivoId: Int): Flow<List<Tarea>>
+
+    /**
+     * Funcion para agregar una tarea a la base de datos.
+     * @param tarea la tarea a agregar.
+     */
+    @Insert
+    suspend fun insertarTarea(tarea: Tarea)
+
+    /**
+     * Funcion para actualizar la informacion de una tarea.
+     * @param tarea la tarea a actualizar.
+     */
+    @Update
+    suspend fun actualizarTarea(tarea: Tarea)
+
+    /**
+     * Funcion para eliminar una tarea de la tabla de tareas de un objetivo.
+     * @param tarea La tarea a eliminar.
+     */
+    @Delete
+    suspend fun eliminarTarea(tarea: Tarea)
 }

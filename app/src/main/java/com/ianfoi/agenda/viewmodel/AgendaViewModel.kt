@@ -7,6 +7,7 @@ import com.ianfoi.agenda.data.AgendaDao
 import com.ianfoi.agenda.model.CategoriaTop
 import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
+import com.ianfoi.agenda.model.Tarea
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -57,6 +58,7 @@ class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
 
     /**
      * Función para agregar un objetivo a la base de datos.
+     * @param nombre El nombre del objetivo.
      */
     fun agregarObjetivo(nombre: String){
         viewModelScope.launch {
@@ -65,22 +67,69 @@ class AgendaViewModel(private val dao: AgendaDao) : ViewModel() {
     }
 
     /**
-     * Funcion para ambiar el estado del objetivo
+     * Funcion para cambiar el estado del objetivo de completado a no completado y viceversa.
+     * @param objetivo El objetivo al que se le cambia el estado.
      */
     fun toggleObjetivo(objetivo: Objetivo){
         viewModelScope.launch {
             dao.actualizarObjetivo(objetivo.copy(isCompletado = !objetivo.isCompletado))
         }
     }
+
+    /**
+     * Funcion para eliminar un objetivo de la base de datos.
+     * @param objetivo el objetivo que se quiere eliminar.
+     */
     fun borrarObjetivo(objetivo: Objetivo){
         viewModelScope.launch {
             dao.eliminarObjetivo(objetivo)
         }
     }
+
+    /**
+     * Funcion para obtener un objetivo de la base de datos a partir de su Id.
+     * @param id La id del objetivo buscado.
+     */
     fun obtenerObjetivo(id: Int): Flow<Objetivo> {
         return dao.obtenerObjetivoPorId(id)
     }
-
+    /**
+     * Funcion para obtener la lista de tareas relacionadas a un objetivo.
+     * @param objetivoId la Id del objetivo padre.
+     * @return FlowList con las tareas asociadas al objetivo.
+     */
+    fun obtenerTareas(objetivoId: Int): Flow<List<Tarea>> {
+        return dao.obtenerTareasDeObjetivo(objetivoId)
+    }
+    /**
+     * Funcion para agregar una tarea asociada a un objetivo.
+     * @param objetivoId la id del objetivo padre de la tarea.
+     * @param nombre El nombre de la tarea.
+     */
+    fun agregarTarea(objetivoId: Int, nombre: String){
+        viewModelScope.launch {
+            val nuevaTarea = Tarea(objetivoId = objetivoId, nombre = nombre)
+            dao.insertarTarea(nuevaTarea)
+        }
+    }
+    /**
+     * Funcion para cambiar el estado de la tarea.
+     * @param tarea la tarea a la que se cambia su estado
+     */
+    fun toggleTarea(tarea: Tarea){
+        viewModelScope.launch {
+            dao.actualizarTarea(tarea.copy(esCompletada = !tarea.esCompletada))
+        }
+    }
+    /**
+     * Funcion para eliminar una tarea del objetivo.
+     * @param tarea La tarea a eliminar
+     */
+    fun eliminarTarea(tarea: Tarea){
+        viewModelScope.launch {
+            dao.eliminarTarea(tarea)
+        }
+    }
 }
 
 /**

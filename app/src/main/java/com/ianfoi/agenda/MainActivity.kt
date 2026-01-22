@@ -88,7 +88,7 @@ fun AppNavigation(dao: AgendaDao) {
                 dao = dao,
                 onBack = { navController.popBackStack() },
                 onItemClick = { objetivoId ->
-                    navController.navigate("objetivo/$id")
+                    navController.navigate("objetivo/$objetivoId")
                 }
             )
         }

@@ -7,9 +7,11 @@ import androidx.room.RoomDatabase
 import com.ianfoi.agenda.model.Categoria
 import com.ianfoi.agenda.model.Objetivo
 import com.ianfoi.agenda.model.Registro
+import com.ianfoi.agenda.model.Tarea
+
 @Database(
-    entities = [Categoria::class, Registro::class, Objetivo::class],
-    version = 2,
+    entities = [Categoria::class, Registro::class, Objetivo::class, Tarea::class],
+    version = 3,
     exportSchema = false
 )
 

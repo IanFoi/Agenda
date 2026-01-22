@@ -22,7 +22,7 @@ import com.ianfoi.agenda.viewmodel.AgendaViewModelFactory
 @Composable
 fun VistaObjetivoScreen(
     dao: AgendaDao,
-    objetivoId: Int, // <--- LA CLAVE: Aquí recibimos el número único (ej. 5)
+    objetivoId: Int,
     onBack: () -> Unit
 ) {
     val viewModel: AgendaViewModel = viewModel(factory = AgendaViewModelFactory(dao))
